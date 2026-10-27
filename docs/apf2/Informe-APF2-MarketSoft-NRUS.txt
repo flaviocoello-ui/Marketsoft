@@ -1,0 +1,340 @@
+================================================================
+INFORME — AVANCE DE PROYECTO FINAL 2
+MarketSoft NRUS: Sistema de ventas e inventario para bodegas
+y minimarkets en Peru (regimen Nuevo RUS, tope S/. 8,000/mes)
+----------------------------------------------------------------
+Universidad Tecnologica del Peru — UTP | Curso Integrador I
+Stack: Java 21, Swing + FlatLaf, SQLite, Maven, MVC + DAO
+Formato APA / IEEE — Diseno de la solucion informatica
+Septiembre 2026
+================================================================
+
+
+RESUMEN EJECUTIVO
+----------------------------------------------------------------
+MarketSoft NRUS digitaliza la bodega de barrio: Venta Express en
+menos de 60 segundos, inventario por Unidad/Caja con costo
+automatico, Dashboard Opcion A (Ventas, Efectivo, Digital
+Yape/Plin, Ganancia del dia), control tributario NRUS Categoria 1
+(S/. 8,000) con semaforo, alertas de stock y vencimiento, historial
+con anulacion, reportes de ganancia y perdida por merma con CSV
+para Excel, y hora de Lima (UTC-5) en toda la app. Funciona sin
+internet en un solo PC.
+
+
+CAPITULO 1. ANALISIS DEL CONTEXTO
+----------------------------------------------------------------
+1.1 Vision, mision, entorno, estrategias y planes
+- Vision: ser la bodega de confianza del barrio, sin quiebres
+  ni sobreprecios.
+- Mision: vender rapido, con stock disponible, precios justos
+  y cuentas claras ante SUNAT.
+- Entorno: competencia (tambos/minimarkets), fiscalizacion
+  Nuevo RUS, clientes que exigen Yape/Plin, compra a
+  mayoristas por caja, espacio limitado.
+- Estrategias: (1) no quebrar top-100, (2) priorizar
+  perecibles por vencer, (3) arqueo diario en 3 minutos,
+  (4) no exceder S/. 8,000/mes.
+- Planes: digitalizar el cuaderno (POS + inventario +
+  reportes); etapa 2: lector de barras y respaldo nube.
+
+1.2 Business Model Canvas (resumen)
+- Socios: mayoristas, Yape/Plin, contador.
+- Actividades: vender, reponer por cajas, controlar
+  vencimiento, arqueo, declarar NRUS.
+- Recursos: POS Java Swing + SQLite, exhibidoras.
+- Propuesta: cobrar en menos de 1 min, no faltar
+  top-vendidos, saber ganancia y tope S/. 8,000.
+- Clientes: vecinos, escolares, trabajadores (pago mixto).
+- Canales: mostrador, WhatsApp pedidos.
+- Ingresos: venta diaria Efectivo + Digital por margen unidad.
+- Costos: mercaderia por caja, merma, alquiler.
+
+1.3 Problema y efecto en los procesos
+Cuaderno manual causa: (a) ventas no registradas, el arqueo
+no cuadra; (b) stock desactualizado, quiebres y sobrestock;
+(c) costo caja a unidad calculado a mano, mal precio/margen;
+(d) merma sin registro, perdida invisible; (e) sin control
+NRUS, riesgo de exceder S/. 8,000; (f) hora UTC mostrada como
+local (+5 h) con cierres de dia errados.
+
+1.4 Alcance de la solucion (SI / NO)
+- SI incluye: Login por rol (Admin/Cajero); Venta Express
+  (catalogo, carrito, vuelto en vivo, Efectivo/Yape/Plin, DNI
+  opcional, F2/Supr); Inventario (12 categorias + gestion,
+  modo Unidad/Caja con equivalencia, calendario, semaforo,
+  filtro Nombre/Codigo); Dashboard Opcion A (Ventas,
+  Efectivo, Digital, Ganancia dia + NRUS heroe + alertas);
+  Historial con filtros y anulacion con devolucion de stock;
+  Reportes Ganancias + Perdidas por merma + CSV Excel;
+  hora Lima en BD y UI.
+- NO incluye: facturacion electronica SUNAT, multitienda,
+  delivery, contabilidad completa.
+
+
+CAPITULO 2. TRES ALTERNATIVAS DE SOLUCION (50% Java o mas)
+----------------------------------------------------------------
+Alternativa A — Escritorio Java Swing + SQLite (ELEGIDA, 100% Java)
+  Pantallas: Login, Venta 3 zonas, Inventario 3 secciones,
+  Dashboard A, Historial, Reportes.
+  Pro: sin internet, rapida, portable. Contra: un solo PC.
+
+Alternativa B — Web Java Spring + Thymeleaf (50% Java o mas)
+  Pantallas: mismas 5 + consulta movil.
+  Pro: multi-dispositivo. Contra: servidor/internet, mas
+  seguridad web.
+
+Alternativa C — Movil Android Java + backend (50% Java o mas)
+  Pantallas: cajero movil, escaner con camara,
+  sincronizacion al PC, consultas, reportes.
+  Pro: movilidad en anaquel. Contra: hardware y
+  sincronizacion offline compleja.
+
+Las 3 cubren el alcance y son 50% Java o mas. Se elige la A
+por costo, trabajo sin internet y velocidad de cola en bodega.
+
+
+CAPITULO 3. REQUERIMIENTOS SRS
+----------------------------------------------------------------
+3.1 Funcionales
+- RF1: Login Admin/Cajero por rol.
+- RF2: Venta: buscar por nombre/codigo, validar stock,
+  carrito editable.
+- RF3: Cobro Efectivo/Yape/Plin, vuelto en vivo, montos
+  rapidos, atajos F2/Supr.
+- RF4: Inventario Unidad/Caja, costo unitario automatico
+  y margen %.
+- RF5: Ingreso por CAJAS (convierte a unidades), retiro
+  como merma con motivo.
+- RF6: 12+ categorias gestionables (agregar/eliminar).
+- RF7: Dashboard A: Ventas, Efectivo, Digital
+  (Yape/Plin), Ganancia estimada del dia.
+- RF8: NRUS S/. 8,000 con semaforo (hora Lima).
+- RF9: Alertas stock bajo / por vencer con prioridad.
+- RF10: Historial filtrable + anulacion con retorno
+  de stock.
+- RF11: Reportes Ganancia/Merma + CSV Excel es-PE.
+- RF12: Fechas UTC a Lima y filtros -5 hours en SQL.
+
+3.2 No funcionales
+- RNF1: Java 21 + Maven (JAR gordo shade).
+- RNF2: SQLite en %APPDATA%/MarketSoftNRUS.
+- RNF3: transacciones atomicas venta/merma
+  (commit/rollback).
+- RNF4: validaciones (DNI 8 digitos, decimales,
+  no negativos).
+- RNF5: FlatLaf, tablas 24-26 px, atajos teclado.
+- RNF6: arranque menor a 3 s con 5,000 productos.
+- RNF7: documentacion Markdown + informe APA/IEEE.
+
+
+CAPITULO 4. DISENO DE LA SOLUCION
+----------------------------------------------------------------
+4.1 Project Charter (resumen)
+- Proyecto: MarketSoft NRUS, POS + inventario (NRUS Cat.1).
+- Objetivo: arqueo en 3 min, 0 quiebres top-100, margen
+  visible, no exceder S/. 8,000.
+- Alcance: Login, Venta, Inventario, Dashboard A,
+  Historial, Reportes, hora Lima.
+- Fuera de alcance: facturacion electronica,
+  multitienda, delivery.
+- Stack: Java 21, Swing + FlatLaf 3.4.1, SQLite 3.45.3,
+  JCalendar 1.4, Maven, MVC + DAO.
+- Riesgos: exceder NRUS, merma oculta, UTC vs Lima,
+  PC unico.
+- Exito: venta menor a 60 s, arqueo cuadra, ganancia
+  y NRUS correctos.
+
+4.2 Gantt (resumen semanal 8)
+- Dias 1-3: BPM venta/inventario.
+- Dias 3-6: ER + clases + SRS.
+- Dias 6-10: Venta + Inventario.
+- Dias 10-13: Dashboard A + NRUS.
+- Dias 13-16: Mermas + hora Lima.
+- Dias 16-19: pruebas + informe APA + PPT 10 min.
+
+4.3 BPM: notacion y procesos TO-BE
+Notacion BPMN 2.0 usada: pool/carril
+(Cliente/Cajero/Sistema), tarea de usuario/servicio,
+compuerta exclusiva XOR (pregunta stock? monto OK?),
+evento inicio/fin, temporizador (revisar vencimiento),
+objeto de datos (ticket, merma).
+
+Proceso Venta TO-BE: Cliente pide, Cajero busca
+(nombre/codigo), Sistema valida stock (XOR sin stock
+sugiere sustituto), agrega al carrito, cobra
+Efectivo/Yape/Plin, Sistema valida monto (XOR
+insuficiente pide faltante), registra transaccion
+atomica + descuenta stock, emite ticket y actualiza
+KPIs/NRUS en hora Lima.
+
+Proceso Inventario/Merma TO-BE: Admin crea producto
+(Unidad/Caja, costo auto), ingresa por CAJAS (el
+sistema convierte a unidades), la venta descuenta,
+si vence o se rompe se retira como merma con motivo,
+el sistema inserta merma + descuenta en una
+transaccion, y genera reporte de perdida.
+
+4.4 Base de datos (logico, fisico y seguridad)
+Tablas:
+- CATEGORIAS (id_categoria PK, nombre UNIQUE) 1-N
+  PRODUCTOS.
+- PRODUCTOS (id_producto PK, codigo_barras UNIQUE,
+  nombre, id_categoria FK, precio_compra_unitario,
+  precio_venta_unitario, viene_en_caja,
+  unidades_por_caja, precio_compra_caja,
+  stock_unidades, stock_minimo, fecha_vencimiento).
+- VENTAS (id_venta PK, fecha_hora UTC, total,
+  monto_recibido, vuelto, metodo_pago CHECK
+  Efectivo/Yape/Plin, dni_cliente, nombre_cliente)
+  1-N DETALLE_VENTAS.
+- DETALLE_VENTAS (id_detalle PK, id_venta FK con
+  DELETE CASCADE, id_producto FK, cantidad,
+  precio_unitario, subtotal).
+- USUARIOS (id_usuario PK, usuario UNIQUE,
+  contrasena, rol CHECK Administrador/Cajero).
+- MERMAS (id_merma PK, id_producto FK, cantidad,
+  motivo, fecha UTC).
+
+Seguridad: siempre PreparedStatement (anti inyeccion),
+transacciones atomicas en venta y merma, validacion
+de DNI y numeros, roles Admin/Cajero, FK activas con
+PRAGMA foreign_keys=ON, DB fuera del JAR en
+%APPDATA%. Hora: se guarda UTC (CURRENT_TIMESTAMP)
+y se lee/filtra en Lima con FechaUtil.utcALima y
+date(..., '-5 hours') porque Peru es UTC-5 fijo.
+Fisico: ver src/main/resources/schema.sql.
+
+4.5 Clases UML (MVC + DAO)
+- Modelo: Producto, Venta (+DetalleVenta), Merma,
+  Categoria, Usuario.
+- DAO (solo SQL): ProductoDAO, VentaDAO (totales por
+  metodo, ganancia del dia), MermaDAO, ReporteDAO,
+  CategoriaDAO.
+- Controller (valida y calcula): ProductoController
+  (costo caja/unidad), VentaController (vuelto,
+  totales), MermaController, CategoriaController.
+- Vista (solo UI): DashboardPanel, VentaExpressPanel,
+  InventarioPanel, HistorialVentasPanel,
+  ReportesPanel + UiHelper (estilos/filtros) y
+  FechaUtil (UTC a Lima). Main/MainView orquesta
+  pestanas con auto-refresh al cambiar de tab.
+
+
+CAPITULO 5. PROTOTIPO UX/UI Y REPORTES
+----------------------------------------------------------------
+5.1 Prototipo funcional (cubre 100% del alcance)
+El JAR en uso ES el prototipo. Flujo demo de 5 min:
+Login cajero, Venta (buscar codigo, doble-clic, +/-,
+Efectivo exacto, F2), Dashboard A verifica
+Efectivo+Digital=Ventas, Inventario crea producto
+Caja 12 x S/. 84 (costo S/. 7 automatico), ingresa
+5 cajas (= 60 unid.), retira 1 caja por Vencimiento,
+Reportes verifica ganancia y perdida, Historial
+filtra Yape y anula una venta con retorno de stock.
+
+5.2 Pantallas y principios UX (Nielsen + FlatLaf)
+- Venta: total 30 pt, vuelto vivo verde/rojo, botones
+  de pago en 1 clic, chips Exacto/10/20/50/100,
+  JSpinner, Enter/F2/Supr, stock con color.
+- Inventario: 3 tarjetas, radio Unidad/Caja que
+  bloquea campos, costo + margen en vivo,
+  calendario JDateChooser, columna Codigo visible y
+  filtro solo por Nombre/Codigo (el stock NO filtra),
+  semaforo de estado.
+- Dashboard A: 4 tarjetas de caja + NRUS heroe a
+  ancho completo + alertas con prioridad
+  (rojo HOY / amarillo Pronto) y sugerido pedir.
+- Historial/Reportes: filtros, colores por metodo,
+  totalizadores, CSV con separador punto y coma y
+  BOM para Excel es-PE, fechas en hora Lima.
+
+5.3 Reportes clave (formulas)
+- Ganancias por producto: cantidad, costo total,
+  venta total, ganancia neta.
+- Perdidas por merma: fecha Lima, producto,
+  cantidad en unidades, costo unitario, perdida,
+  motivo + total.
+- CSV ventas: Fecha Lima, Cliente, DNI, Metodo,
+  Venta, Costo, Ganancia.
+- Formulas: ganancia = suma(subtotal - cant x
+  costo_unit); perdida = suma(cant x costo_unit).
+  Filtros dia/mes/rango siempre con '-5 hours'.
+
+
+CAPITULO 6. DOCUMENTACION TECNICA (PARA DESARROLLADORES)
+----------------------------------------------------------------
+- Instalar: JDK 21 + NetBeans/Maven; comando
+  mvn package genera el JAR gordo (maven-shade).
+- Dependencias: sqlite-jdbc 3.45.3.0, flatlaf 3.4.1,
+  jcalendar 1.4.
+- Ejecutar: java -jar target/*.jar; usuarios demo
+  admin/admin y cajero/cajero; la DB se crea sola en
+  %APPDATA%/MarketSoftNRUS/marketsoft.db; no
+  requiere internet.
+- Arquitectura: Main, MainView (pestanas),
+  Paneles, Controller, DAO, SQLite; UiHelper
+  (estilos/filtros), FechaUtil (UTC a Lima).
+- Pruebas sugeridas: vender en Efectivo y Yape,
+  ingresar por cajas, registrar merma, anular venta,
+  exportar CSV y abrirlo en Excel.
+
+
+CAPITULO 7. GUIA DE SUSTENTACION ORAL (10 MIN, 8 SLIDES)
+----------------------------------------------------------------
+- Slide 1 Portada: MarketSoft NRUS + tope S/. 8,000
+  + integrantes.
+- Slide 2 Contexto/Canvas: bodega, cuaderno vs
+  arqueo/merma/NRUS + vision/mision/entorno/
+  estrategia/planes.
+- Slide 3 Alternativas: tabla Swing elegida vs Web
+  vs Movil (50% Java o mas) + 5 pantallas c/u.
+- Slide 4 SRS: RF1-RF12 + RNF1-7 en 2 columnas.
+- Slide 5 Diseno: charter mini + gantt + BPM TO-BE
+  venta (XOR stock/monto) + ER + clases MVC+DAO.
+- Slide 6 Demo viva (4 min): Venta F2, Dashboard A
+  (Efectivo+Digital=Ventas), Inventario por cajas,
+  Merma, Reportes CSV Lima.
+- Slide 7 UX/Reportes: antes/despues (ticket a caja,
+  UTC a Lima, filtro por codigo) + formulas
+  ganancia/perdida.
+- Slide 8 Cierre: aporte, trabajo futuro (lector de
+  barras, factura electronica) + referencias.
+- Reparto: 0:00-1:30 contexto; 1:30-3:00
+  alternativas+SRS; 3:00-5:00 diseno; 5:00-9:00
+  demo; 9:00-10:00 UX, reportes y cierre.
+- Frases de dominio: "segun BPMN 2.0...",
+  "transaccion atomica...", "hora Lima con
+  -5 hours...", "Nielsen: visibilidad y prevencion...".
+
+
+REFERENCIAS (APA 7 / IEEE)
+----------------------------------------------------------------
+- Object Management Group. (2014). BPMN 2.0.
+- IEEE Std 830-1998, Especificacion de
+  Requerimientos de Software (SRS).
+- Sommerville, I. (2011). Ingenieria de software
+  (9.a ed.). Pearson.
+- SUNAT. (2026). Nuevo RUS, Categoria 1
+  (tope S/. 8,000). https://www.sunat.gob.pe
+- Oracle. (2024). Java 21 docs.
+- SQLite docs. Date and time functions.
+- FormDev. FlatLaf Look and Feel.
+  https://www.formdev.com/flatlaf/
+
+
+ANEXOS
+----------------------------------------------------------------
+- Anexo A: modelos BPM (ver Capitulo 4.3).
+- Anexo B: diseno BD, schema.sql + diagrama ER.
+- Anexo C: diagrama de clases UML MVC+DAO.
+- Anexo D: prototipos (JAR funcional) + CSV ejemplo.
+- Anexo E: codigo clave (VentaDAO totales por
+  metodo y ganancia del dia, FechaUtil UTC a Lima,
+  DashboardPanel Opcion A).
+- Detalle tecnico completo en formato Markdown en
+  la carpeta docs/apf2/ (archivos 01 a 05).
+
+================================================================
+FIN DEL INFORME
+================================================================

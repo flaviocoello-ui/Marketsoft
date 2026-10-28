@@ -1,9 +1,18 @@
 package marketsoft.controller;
 import marketsoft.dao.UsuarioDAO;
+import marketsoft.dao.IUsuarioDAO;
 import marketsoft.model.Usuario;
 
 public class LoginController {
-    private final UsuarioDAO usuarioDAO = new UsuarioDAO();
+    private final IUsuarioDAO usuarioDAO;
+
+    public LoginController() {
+        this(new UsuarioDAO());
+    }
+
+    public LoginController(IUsuarioDAO usuarioDAO) {
+        this.usuarioDAO = usuarioDAO;
+    }
 
     public Usuario iniciarSesion(String usuario, String contrasena) {
         if (usuario == null || usuario.isBlank() || contrasena == null || contrasena.isBlank()) {

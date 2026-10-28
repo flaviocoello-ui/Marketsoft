@@ -7,9 +7,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 /** Mermas: perdidas por vencimiento/rotura/robo. Registra merma + descuenta stock en una transaccion. */
-public class MermaDAO {
+public class MermaDAO implements IMermaDAO {
 
     /** Registra merma en UNIDADES y descuenta stock atomicamente. Devuelve false si stock insuficiente. */
+    @Override
     public boolean registrarMerma(int idProducto, int cantidadUnidades, String motivo) {
         if (cantidadUnidades <= 0) return false;
         Connection conn = ConexionSQLite.getConexion();
@@ -46,6 +47,7 @@ public class MermaDAO {
         }
     }
 
+    @Override
     public List<Merma> listarPorRango(String desde, String hasta) {
         List<Merma> lista = new ArrayList<>();
         String sql = "SELECT m.id_merma, m.id_producto, p.nombre, m.cantidad, m.motivo, m.fecha, "

@@ -1,11 +1,20 @@
 package marketsoft.controller;
 
 import marketsoft.dao.MermaDAO;
+import marketsoft.dao.IMermaDAO;
 import marketsoft.model.Merma;
 import java.util.List;
 
 public class MermaController {
-    private final MermaDAO dao = new MermaDAO();
+    private final IMermaDAO dao;
+
+    public MermaController() {
+        this(new MermaDAO());
+    }
+
+    public MermaController(IMermaDAO dao) {
+        this.dao = dao;
+    }
 
     public boolean registrarMerma(int idProducto, int cantidadUnidades, String motivo) {
         if (cantidadUnidades <= 0) return false;

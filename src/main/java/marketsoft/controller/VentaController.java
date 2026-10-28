@@ -1,5 +1,6 @@
 package marketsoft.controller;
 import marketsoft.dao.VentaDAO;
+import marketsoft.dao.IVentaDAO;
 import marketsoft.model.DetalleVenta;
 import marketsoft.model.Venta;
 import java.sql.SQLException;
@@ -7,7 +8,15 @@ import java.util.List;
 
 public class VentaController {
 
-    private final VentaDAO ventaDAO = new VentaDAO();
+    private final IVentaDAO ventaDAO;
+
+    public VentaController() {
+        this(new VentaDAO());
+    }
+
+    public VentaController(IVentaDAO ventaDAO) {
+        this.ventaDAO = ventaDAO;
+    }
 
     public double calcularVuelto(double total, double montoRecibido) {
         return montoRecibido - total;
@@ -15,6 +24,13 @@ public class VentaController {
 
     public boolean procesarVenta(List<DetalleVenta> carrito, double montoRecibido, String metodoPago,
             String dniCliente, String nombreCliente) throws SQLException {
+        // Reglas de negocio en el controller (no solo en la vista):
+        if (carrito == null || carrito.isEmpty()) {
+            return false;           // no se registra una venta sin productos
+        }
+        if (dniCliente != null && !dniCliente.isBlank() && !dniCliente.trim().matches("\\d{8}")) {
+            return false;           // DNI opcional, pero si viene debe tener 8 dígitos
+        }
         double total = carrito.stream().mapToDouble(DetalleVenta::getSubtotal).sum();
         double vuelto = calcularVuelto(total, montoRecibido);
         if (vuelto < 0) {

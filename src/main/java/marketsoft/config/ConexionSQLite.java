@@ -32,6 +32,11 @@ public class ConexionSQLite {
         return new File(carpetaApp, NOMBRE_ARCHIVO_DB).getAbsolutePath();
     }
 
+    // Expone la ruta del archivo .db actual — la usa RespaldoController para exportar/importar.
+    public static String getRutaArchivoDb() {
+        return obtenerRutaBaseDeDatos();
+    }
+
     public static Connection getConexion() {
         try {
             if (conexion == null || conexion.isClosed()) {
@@ -82,12 +87,15 @@ public class ConexionSQLite {
         try (Statement st = conexion.createStatement(); ResultSet rs = st.executeQuery("SELECT COUNT(*) FROM categorias")) {
             boolean vacia = rs.next() && rs.getInt(1) == 0;
             if (vacia) {
-                for (String c : categoriasBase()) st.execute("INSERT INTO categorias (nombre) VALUES ('" + c.replace("'", "''") + "')");
-            } else {
-                // Migracion: si la BD ya existia con solo 4 categorias, agrega las faltantes sin duplicar
                 for (String c : categoriasBase()) {
-                    try { st.execute("INSERT OR IGNORE INTO categorias (nombre) VALUES ('" + c.replace("'", "''") + "')"); }
-                    catch (SQLException ignored) {}
+                    st.execute("INSERT INTO categorias (nombre) VALUES ('" + c.replace("'", "''") + "')");
+                }
+            } else {
+                for (String c : categoriasBase()) {
+                    try {
+                        st.execute("INSERT OR IGNORE INTO categorias (nombre) VALUES ('" + c.replace("'", "''") + "')");
+                    } catch (SQLException ignored) {
+                    }
                 }
             }
         } catch (SQLException e) {

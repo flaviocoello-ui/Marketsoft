@@ -17,6 +17,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
+import static javax.swing.SwingConstants.RIGHT;
+import marketsoft.model.FilaReporte;
+import marketsoft.model.FilaVenta;
 
 /** Punto 4 admin + OPCION 14: pestanas Ganancias y Perdidas por merma (valorizada a costo). */
 public class ReportesPanel extends JPanel {
@@ -156,9 +159,9 @@ public class ReportesPanel extends JPanel {
         if (!fechasValidas(desde, hasta)) return;
         // Ganancias
         modeloReporte.setRowCount(0);
-        List<ReporteDAO.FilaReporte> filas = reporteController.obtenerRentabilidad(desde, hasta);
+        List<FilaReporte> filas = reporteController.obtenerRentabilidad(desde, hasta);
         double vT = 0, cT = 0, gT = 0;
-        for (ReporteDAO.FilaReporte f : filas) {
+        for (FilaReporte f : filas) {
             modeloReporte.addRow(new Object[]{f.producto, f.cantidad,
                     String.format("%.2f", f.costoTotal), String.format("%.2f", f.ventaTotal), String.format("%.2f", f.gananciaNeta)});
             vT += f.ventaTotal; cT += f.costoTotal; gT += f.gananciaNeta;
@@ -167,7 +170,7 @@ public class ReportesPanel extends JPanel {
         lblCosto.setText(String.format("S/. %.2f", cT));
         lblGanancia.setText(String.format("S/. %.2f", gT));
         lblGanancia.setForeground(gT < 0 ? UiHelper.ROJO : UiHelper.VERDE);
-        List<ReporteDAO.FilaVenta> ventas = reporteController.obtenerVentasConCosto(desde, hasta);
+        List<FilaVenta> ventas = reporteController.obtenerVentasConCosto(desde, hasta);
         lblNVentas.setText(ventas.isEmpty() ? "0" : ventas.size() + " (" + UiHelper.moneda(vT / ventas.size()) + " c/u)");
         // Mermas (fecha UTC -> Lima)
         modeloMermas.setRowCount(0);
@@ -186,7 +189,7 @@ public class ReportesPanel extends JPanel {
     private void exportarCSV() {
         String desde = txtDesde.getText().trim(), hasta = txtHasta.getText().trim();
         if (!fechasValidas(desde, hasta)) return;
-        List<ReporteDAO.FilaVenta> ventas = reporteController.obtenerVentasConCosto(desde, hasta);
+        List<FilaVenta> ventas = reporteController.obtenerVentasConCosto(desde, hasta);
         if (ventas.isEmpty()) { JOptionPane.showMessageDialog(this, "No hay ventas en ese rango.", "Aviso", JOptionPane.WARNING_MESSAGE); return; }
         JFileChooser selector = new JFileChooser();
         selector.setSelectedFile(new File("historial_ventas_" + desde + "_a_" + hasta + ".csv"));
@@ -196,7 +199,7 @@ public class ReportesPanel extends JPanel {
         try (OutputStreamWriter w = new OutputStreamWriter(new FileOutputStream(archivo), StandardCharsets.UTF_8)) {
             w.write('\uFEFF');
             w.write("Fecha;Cliente;DNI;Metodo de Pago;Venta Total;Costo Total;Ganancia Neta\n");
-            for (ReporteDAO.FilaVenta f : ventas) {
+            for (FilaVenta f : ventas) {
                 String fecha = FechaUtil.formatearLima(f.fecha); // UTC -> Lima (antes salia +5h)
                 w.write(String.format(localeExcel, "%s;%s;%s;%s;%.2f;%.2f;%.2f%n",
                         fecha, f.cliente != null ? f.cliente : "", f.dni != null ? f.dni : "",

@@ -3,9 +3,10 @@ import marketsoft.config.ConexionSQLite;
 import marketsoft.model.Usuario;
 import java.sql.*;
 
-public class UsuarioDAO {
+public class UsuarioDAO implements IUsuarioDAO {
 
     // Login: valida usuario+contraseña y devuelve el Usuario o null
+    @Override
     public Usuario autenticar(String usuario, String contrasena) {
         String sql = "SELECT * FROM usuarios WHERE usuario = ? AND contrasena = ?";
         try (PreparedStatement ps = ConexionSQLite.getConexion().prepareStatement(sql)) {

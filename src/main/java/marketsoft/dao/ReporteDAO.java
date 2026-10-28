@@ -1,35 +1,18 @@
 package marketsoft.dao;
 import marketsoft.config.ConexionSQLite;
+import marketsoft.model.FilaReporte;
+import marketsoft.model.FilaVenta;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ReporteDAO {
+public class ReporteDAO implements IReporteDAO {
 
-    // Fila para el reporte de rentabilidad POR PRODUCTO (pestaña Reportes, tabla de pantalla)
-    public static class FilaReporte {
-
-        public String producto;
-        public int cantidad;
-        public double costoTotal, ventaTotal, gananciaNeta;
-    }
-
-    // Fila para la exportación a CSV: una fila POR VENTA (no por producto),
-    // porque el cliente/DNI solo existen a nivel de venta completa.
-    public static class FilaVenta {
-
-        public int idVenta;
-        public String fecha; // tal como viene de SQLite ("YYYY-MM-DD HH:MM:SS")
-        public String cliente;
-        public String dni;
-        public String metodoPago;
-        public double ventaTotal, costoTotal, gananciaNeta;
-    }
-
+    @Override
     public List<FilaReporte> rentabilidadPorRango(String desde, String hasta) {
         List<FilaReporte> lista = new ArrayList<>();
         String sql = "SELECT p.nombre, SUM(dv.cantidad) AS cant, "
-                + "SUM(dv.cantidad * p.precio_compra_unitario) AS costo, "
+                + "SUM(dv.cantidad * COALESCE(dv.costo_unitario_compra, p.precio_compra_unitario)) AS costo, "
                 + "SUM(dv.subtotal) AS venta "
                 + "FROM detalle_ventas dv "
                 + "JOIN ventas v ON dv.id_venta = v.id_venta "
@@ -58,11 +41,12 @@ public class ReporteDAO {
 
     // Para el botón "Exportar CSV" de ReportesPanel: una fila por venta, con su costo
     // total calculado en la misma consulta (evita hacer una query por cada venta).
+    @Override
     public List<FilaVenta> ventasConCostoPorRango(String desde, String hasta) {
         List<FilaVenta> lista = new ArrayList<>();
         String sql = "SELECT v.id_venta, v.fecha_hora, v.nombre_cliente, v.dni_cliente, v.metodo_pago, "
                 + "v.total AS venta_total, "
-                + "COALESCE(SUM(dv.cantidad * p.precio_compra_unitario), 0) AS costo_total "
+                + "COALESCE(SUM(dv.cantidad * COALESCE(dv.costo_unitario_compra, p.precio_compra_unitario)), 0) AS costo_total "
                 + "FROM ventas v "
                 + "LEFT JOIN detalle_ventas dv ON dv.id_venta = v.id_venta "
                 + "LEFT JOIN productos p ON dv.id_producto = p.id_producto "

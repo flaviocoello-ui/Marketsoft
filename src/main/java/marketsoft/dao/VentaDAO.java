@@ -7,16 +7,17 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class VentaDAO {
+public class VentaDAO implements IVentaDAO {
 
     private final ProductoDAO productoDAO = new ProductoDAO();
 
     // Relanza la excepción real de SQLite para que la vista pueda mostrar el motivo exacto del fallo.
+    @Override
     public void registrarVenta(Venta venta) throws SQLException {
         Connection conn = ConexionSQLite.getConexion();
         String sqlVenta = "INSERT INTO ventas (total, monto_recibido, vuelto, metodo_pago, dni_cliente, nombre_cliente) "
                 + "VALUES (?,?,?,?,?,?)";
-        String sqlDetalle = "INSERT INTO detalle_ventas (id_venta, id_producto, cantidad, precio_unitario, subtotal) VALUES (?,?,?,?,?)";
+        String sqlDetalle = "INSERT INTO detalle_ventas (id_venta, id_producto, cantidad, precio_unitario, costo_unitario_compra, subtotal) VALUES (?,?,?,?,?,?)";
 
         try {
             conn.setAutoCommit(false); // todo o nada
@@ -42,7 +43,8 @@ public class VentaDAO {
                     ps.setInt(2, d.getIdProducto());
                     ps.setInt(3, d.getCantidad());
                     ps.setDouble(4, d.getPrecioUnitario());
-                    ps.setDouble(5, d.getSubtotal());
+                    ps.setDouble(5, d.getCostoUnitarioCompra());
+                    ps.setDouble(6, d.getSubtotal());
                     ps.addBatch();
                     productoDAO.descontarStock(conn, d.getIdProducto(), d.getCantidad());
                 }
@@ -63,6 +65,7 @@ public class VentaDAO {
     }
 
     // Para el panel de Historial de Ventas
+    @Override
     public List<Venta> listarVentas() {
         List<Venta> lista = new ArrayList<>();
         String sql = "SELECT * FROM ventas ORDER BY fecha_hora DESC";
@@ -100,7 +103,7 @@ public class VentaDAO {
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     lista.add(new DetalleVenta(rs.getInt("id_producto"), rs.getString("nombre"),
-                            rs.getInt("cantidad"), rs.getDouble("precio_unitario")));
+                            rs.getInt("cantidad"), rs.getDouble("precio_unitario"), 0));
                 }
             }
         } catch (SQLException e) {
@@ -112,6 +115,7 @@ public class VentaDAO {
     // Elimina una venta: devuelve el stock de cada producto vendido y borra el registro.
     // El DELETE en "ventas" hace cascada sobre "detalle_ventas" porque el schema lo declara
     // ON DELETE CASCADE y PRAGMA foreign_keys = ON está activo desde ConexionSQLite.
+    @Override
     public boolean eliminarVenta(int idVenta) throws SQLException {
         Connection conn = ConexionSQLite.getConexion();
         List<DetalleVenta> detalles = obtenerDetallesPorVenta(idVenta);
@@ -141,6 +145,7 @@ public class VentaDAO {
         }
     }
 
+    @Override
     public double totalVentasDelMes() {
         // Peru UTC-5: se compara el mes en hora Lima, no UTC (evita que ventas de la 00:xx caigan en otro dia/mes)
         String sql = "SELECT COALESCE(SUM(total),0) AS total FROM ventas "
@@ -155,6 +160,7 @@ public class VentaDAO {
         return 0.0;
     }
 
+    @Override
     public double totalVentasDelDia() {
         String sql = "SELECT COALESCE(SUM(total),0) AS total FROM ventas WHERE date(fecha_hora,'-5 hours') = date('now','-5 hours')";
         try (Statement st = ConexionSQLite.getConexion().createStatement(); ResultSet rs = st.executeQuery(sql)) {
@@ -167,6 +173,7 @@ public class VentaDAO {
         return 0.0;
     }
 
+    @Override
     public int contarVentasDelDia() {
         String sql = "SELECT COUNT(*) AS n FROM ventas WHERE date(fecha_hora,'-5 hours') = date('now','-5 hours')";
         try (Statement st = ConexionSQLite.getConexion().createStatement(); ResultSet rs = st.executeQuery(sql)) {
@@ -175,6 +182,7 @@ public class VentaDAO {
         return 0;
     }
 
+    @Override
     public double ticketPromedioDia() {
         String sql = "SELECT COALESCE(AVG(total),0) AS t FROM ventas WHERE date(fecha_hora,'-5 hours') = date('now','-5 hours')";
         try (Statement st = ConexionSQLite.getConexion().createStatement(); ResultSet rs = st.executeQuery(sql)) {
@@ -184,6 +192,7 @@ public class VentaDAO {
     }
 
     /** Opcion A dashboard: total del dia por metodo (hora Lima). metodo: Efectivo/Yape/Plin. */
+    @Override
     public double totalDiaPorMetodo(String metodoPago) {
         String sql = "SELECT COALESCE(SUM(total),0) AS t FROM ventas "
                 + "WHERE date(fecha_hora,'-5 hours') = date('now','-5 hours') AND metodo_pago = ?";
@@ -197,6 +206,7 @@ public class VentaDAO {
     }
 
     /** Suma Yape + Plin del dia (para tarjeta Digital). */
+    @Override
     public double totalDigitalDia() {
         String sql = "SELECT COALESCE(SUM(total),0) AS t FROM ventas "
                 + "WHERE date(fecha_hora,'-5 hours') = date('now','-5 hours') AND metodo_pago IN ('Yape','Plin')";
@@ -207,8 +217,9 @@ public class VentaDAO {
     }
 
     /** Ganancia estimada del dia: suma(subtotal - cantidad*costo_unitario) en hora Lima. */
+    @Override
     public double gananciaEstimadaDelDia() {
-        String sql = "SELECT COALESCE(SUM(dv.subtotal - dv.cantidad * p.precio_compra_unitario),0) AS g "
+        String sql = "SELECT COALESCE(SUM(dv.subtotal - dv.cantidad * COALESCE(dv.costo_unitario_compra, p.precio_compra_unitario)),0) AS g "
                 + "FROM detalle_ventas dv "
                 + "JOIN ventas v ON dv.id_venta = v.id_venta "
                 + "JOIN productos p ON dv.id_producto = p.id_producto "

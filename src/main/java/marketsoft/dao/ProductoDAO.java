@@ -1,13 +1,15 @@
 package marketsoft.dao;
 import marketsoft.config.ConexionSQLite;
 import marketsoft.model.Producto;
+import marketsoft.model.ResultadoEliminacion;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ProductoDAO {
+public class ProductoDAO implements IProductoDAO {
 
+    @Override
     public boolean guardar(Producto p) {
         String sql = "INSERT INTO productos (codigo_barras, nombre, id_categoria, "
                 + "precio_compra_unitario, precio_venta_unitario, viene_en_caja, "
@@ -22,6 +24,7 @@ public class ProductoDAO {
         }
     }
 
+    @Override
     public boolean actualizar(Producto p) {
         String sql = "UPDATE productos SET codigo_barras=?, nombre=?, id_categoria=?, "
                 + "precio_compra_unitario=?, precio_venta_unitario=?, viene_en_caja=?, "
@@ -51,10 +54,12 @@ public class ProductoDAO {
         ps.setString(11, p.getFechaVencimiento() != null ? p.getFechaVencimiento().toString() : null);
     }
 
+    @Override
     public List<Producto> listarTodos() {
         List<Producto> lista = new ArrayList<>();
         String sql = "SELECT p.*, c.nombre AS nombre_categoria FROM productos p "
-                + "LEFT JOIN categorias c ON p.id_categoria = c.id_categoria ORDER BY p.nombre";
+                + "LEFT JOIN categorias c ON p.id_categoria = c.id_categoria "
+                + "WHERE p.activo = 1 ORDER BY p.nombre";
         try (Statement st = ConexionSQLite.getConexion().createStatement(); ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) {
                 lista.add(mapearProducto(rs));
@@ -65,11 +70,12 @@ public class ProductoDAO {
         return lista;
     }
 
+    @Override
     public List<Producto> buscarPorNombre(String texto) {
         List<Producto> lista = new ArrayList<>();
         String sql = "SELECT p.*, c.nombre AS nombre_categoria FROM productos p "
                 + "LEFT JOIN categorias c ON p.id_categoria = c.id_categoria "
-                + "WHERE p.nombre LIKE ? OR p.codigo_barras = ? ORDER BY p.nombre";
+                + "WHERE p.activo = 1 AND (p.nombre LIKE ? OR p.codigo_barras = ?) ORDER BY p.nombre";
         try (PreparedStatement ps = ConexionSQLite.getConexion().prepareStatement(sql)) {
             ps.setString(1, "%" + texto + "%");
             ps.setString(2, texto);
@@ -84,6 +90,7 @@ public class ProductoDAO {
         return lista;
     }
 
+    @Override
     public Producto buscarPorId(int idProducto) {
         String sql = "SELECT p.*, c.nombre AS nombre_categoria FROM productos p "
                 + "LEFT JOIN categorias c ON p.id_categoria = c.id_categoria "
@@ -101,11 +108,12 @@ public class ProductoDAO {
         return null;
     }
 
+    @Override
     public List<Producto> listarStockBajo() {
         List<Producto> lista = new ArrayList<>();
         String sql = "SELECT p.*, c.nombre AS nombre_categoria FROM productos p "
                 + "LEFT JOIN categorias c ON p.id_categoria = c.id_categoria "
-                + "WHERE p.stock_unidades <= p.stock_minimo";
+                + "WHERE p.activo = 1 AND p.stock_unidades <= p.stock_minimo";
         try (Statement st = ConexionSQLite.getConexion().createStatement(); ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) {
                 lista.add(mapearProducto(rs));
@@ -116,11 +124,12 @@ public class ProductoDAO {
         return lista;
     }
 
+    @Override
     public List<Producto> listarProximosAVencer(int diasLimite) {
         List<Producto> lista = new ArrayList<>();
         String sql = "SELECT p.*, c.nombre AS nombre_categoria FROM productos p "
                 + "LEFT JOIN categorias c ON p.id_categoria = c.id_categoria "
-                + "WHERE p.fecha_vencimiento IS NOT NULL "
+                + "WHERE p.activo = 1 AND p.fecha_vencimiento IS NOT NULL "
                 + "AND julianday(p.fecha_vencimiento) - julianday('now','-5 hours') <= ?";
         try (PreparedStatement ps = ConexionSQLite.getConexion().prepareStatement(sql)) {
             ps.setInt(1, diasLimite);
@@ -146,6 +155,7 @@ public class ProductoDAO {
     }
 
     // Reabastecimiento manual desde Inventario
+    @Override
     public boolean aumentarStock(int idProducto, int cantidad) {
         String sql = "UPDATE productos SET stock_unidades = stock_unidades + ? WHERE id_producto = ?";
         try (PreparedStatement ps = ConexionSQLite.getConexion().prepareStatement(sql)) {
@@ -159,6 +169,7 @@ public class ProductoDAO {
     }
 
     // Retiro manual de stock desde Inventario (mermas, ajustes, etc.)
+    @Override
     public boolean disminuirStock(int idProducto, int cantidad) {
         Producto actual = buscarPorId(idProducto);
         if (actual == null || actual.getStockUnidades() < cantidad) {
@@ -172,6 +183,30 @@ public class ProductoDAO {
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
+        }
+    }
+
+    // Intenta borrar el producto. Si tiene ventas o mermas asociadas, la FK lo
+    // bloquea (RESTRICT) y en su lugar lo oculta (activo = 0) para no romper
+    // el historial. Asi nunca se pierde un producto que ya tiene movimientos.
+    @Override
+    public ResultadoEliminacion eliminar(int idProducto) {
+        String sqlDelete = "DELETE FROM productos WHERE id_producto = ?";
+        try (PreparedStatement ps = ConexionSQLite.getConexion().prepareStatement(sqlDelete)) {
+            ps.setInt(1, idProducto);
+            int filas = ps.executeUpdate();
+            return filas > 0 ? ResultadoEliminacion.ELIMINADO : ResultadoEliminacion.ERROR;
+        } catch (SQLException e) {
+            System.err.println("No se pudo eliminar producto (tiene historial), se oculta: " + e.getMessage());
+            String sqlOcultar = "UPDATE productos SET activo = 0 WHERE id_producto = ?";
+            try (PreparedStatement ps2 = ConexionSQLite.getConexion().prepareStatement(sqlOcultar)) {
+                ps2.setInt(1, idProducto);
+                int filas2 = ps2.executeUpdate();
+                return filas2 > 0 ? ResultadoEliminacion.OCULTADO : ResultadoEliminacion.ERROR;
+            } catch (SQLException e2) {
+                e2.printStackTrace();
+                return ResultadoEliminacion.ERROR;
+            }
         }
     }
 

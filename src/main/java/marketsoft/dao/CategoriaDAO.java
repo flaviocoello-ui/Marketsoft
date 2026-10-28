@@ -5,8 +5,9 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CategoriaDAO {
+public class CategoriaDAO implements ICategoriaDAO {
 
+    @Override
     public List<Categoria> listarTodas() {
         List<Categoria> lista = new ArrayList<>();
         String sql = "SELECT * FROM categorias ORDER BY nombre";
@@ -20,6 +21,7 @@ public class CategoriaDAO {
         return lista;
     }
 
+    @Override
     public boolean guardar(String nombre) {
         String sql = "INSERT INTO categorias (nombre) VALUES (?)";
         try (PreparedStatement ps = ConexionSQLite.getConexion().prepareStatement(sql)) {
@@ -31,6 +33,7 @@ public class CategoriaDAO {
         }
     }
 
+    @Override
     public boolean eliminar(int idCategoria) {
         String sql = "DELETE FROM categorias WHERE id_categoria = ?";
         try (PreparedStatement ps = ConexionSQLite.getConexion().prepareStatement(sql)) {

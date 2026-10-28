@@ -14,6 +14,8 @@ import java.awt.*;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import static javax.swing.JComponent.WHEN_ANCESTOR_OF_FOCUSED_COMPONENT;
+import static javax.swing.SwingConstants.CENTER;
 
 /**
  * OPCIONES 5-8 + 12-13:
@@ -95,6 +97,7 @@ public class VentaExpressPanel extends JPanel {
         tablaCatalogo.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override public void mouseClicked(java.awt.event.MouseEvent e) { if (e.getClickCount() == 2) agregarSeleccionado(); }
         });
+        tablaCatalogo.removeColumn(tablaCatalogo.getColumnModel().getColumn(0)); // oculta ID
         panel.add(new JScrollPane(tablaCatalogo), BorderLayout.CENTER);
 
         JPanel abajo = new JPanel(new BorderLayout(6, 0));
@@ -313,7 +316,8 @@ public class VentaExpressPanel extends JPanel {
         }
         DetalleVenta ex = carrito.stream().filter(d -> d.getIdProducto() == idProducto).findFirst().orElse(null);
         if (ex != null) ex.setCantidad(ex.getCantidad() + cantidad);
-        else carrito.add(new DetalleVenta(p.getIdProducto(), p.getNombre(), cantidad, p.getPrecioVentaUnitario()));
+        else carrito.add(new DetalleVenta(p.getIdProducto(), p.getNombre(), cantidad,
+                p.getPrecioVentaUnitario(), p.getPrecioCompraUnitario())); // costo congelado al momento de la venta
         refrescarCarrito();
     }
 

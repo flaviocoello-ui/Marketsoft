@@ -5,16 +5,19 @@ public class DetalleVenta {
     private String nombreProducto; // solo para mostrar en el carrito
     private int cantidad;
     private double precioUnitario;
+    private double costoUnitarioCompra; // foto histórica del costo al momento de la venta
     private double subtotal;
 
     public DetalleVenta() {
     }
 
-    public DetalleVenta(int idProducto, String nombreProducto, int cantidad, double precioUnitario) {
+    public DetalleVenta(int idProducto, String nombreProducto, int cantidad, double precioUnitario,
+                         double costoUnitarioCompra) {
         this.idProducto = idProducto;
         this.nombreProducto = nombreProducto;
         this.cantidad = cantidad;
         this.precioUnitario = precioUnitario;
+        this.costoUnitarioCompra = costoUnitarioCompra;
         this.subtotal = cantidad * precioUnitario;
     }
 
@@ -37,6 +40,10 @@ public class DetalleVenta {
 
     public double getPrecioUnitario() {
         return precioUnitario;
+    }
+
+    public double getCostoUnitarioCompra() {
+        return costoUnitarioCompra;
     }
 
     public double getSubtotal() {
